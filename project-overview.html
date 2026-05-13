@@ -349,10 +349,12 @@
 
     /* ── Responsive ── */
     @media (max-width: 768px) {
-      .hdr { padding: 0 20px; min-height: 60px; }
+      .hdr { padding: 0 20px; flex-wrap: wrap; align-content: center; gap: 6px; }
       .hdr-prompt { display: none; }
+      .hdr-right { flex-wrap: wrap; gap: 4px; }
+      .hdr-pill { font-size: 0.6rem; padding: 3px 8px; }
       .hdr-title { font-size: 0.95rem; }
-      .tabs-wrap { top: 60px; padding: 0 12px; }
+      .tabs-wrap { padding: 0 12px; }
       .tab { font-size: 0.7rem; padding: 12px 14px; }
       .page-inner { padding: 24px 16px 48px; }
       .metrics-row { grid-template-columns: repeat(3, 1fr); }
@@ -968,6 +970,14 @@ df = df[df[<span class="st">'WH ETA'</span>].notna()].copy()
       setTimeout(() => e.classList.add('run'), 80 + idx * 60);
     });
   }
+
+  function syncTabsTop() {
+    const hdr = document.querySelector('.hdr');
+    const tabs = document.querySelector('.tabs-wrap');
+    if (hdr && tabs) tabs.style.top = hdr.offsetHeight + 'px';
+  }
+  syncTabsTop();
+  window.addEventListener('resize', syncTabsTop);
 
   function switchTab(i) {
     document.querySelectorAll('.tab').forEach((t, j)  => t.classList.toggle('active', j === i));
