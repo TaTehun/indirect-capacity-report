@@ -242,6 +242,11 @@
       position: relative;
       flex-shrink: 0;
     }
+    @media (max-width: 600px) {
+      .station-track-h { flex-wrap: wrap; padding: 16px 12px; row-gap: 20px; }
+      .station-h { min-width: calc(50% - 8px); flex-shrink: 0; gap: 6px; }
+      .station-h-rail { display: none; }
+    }
     .station-h-dot {
       width: 36px; height: 36px;
       border-radius: 50%;
