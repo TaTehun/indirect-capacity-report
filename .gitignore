@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+
+# Data files
+data/
+*.xlsx
+*.xlsm
+*.xls
+
+# IDE
+.idea/
+
+# Env
+.env
+
+# Logs
+*.log
+
+# Claude Code
+.claude/
+
+# Temp / lock files
+~$*

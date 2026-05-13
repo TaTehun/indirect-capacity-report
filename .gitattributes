@@ -1,2 +1,14 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Python
+*.py text eol=lf
+
+# Excel (binary)
+*.xlsx binary
+*.xlsm binary
+*.xls  binary
+
+# Disable linguist rendering
+*.html linguist-detectable=false
+*.htm  linguist-detectable=false

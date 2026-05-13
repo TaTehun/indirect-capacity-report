@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inbound Capacity Report — Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:    #080b10;
+      --bg-page:    #0f1318;
+      --bg-card:    #1c2230;
+      --bg-input:   #131720;
+      --border:     #404858;
+      --border-hi:  #505a6e;
+      --text-1:     #e6edf3;
+      --text-2:     #c8d4e0;
+      --text-3:     #a0adb8;
+      --green:      #4ade80;
+      --blue:       #60a5fa;
+      --red:        #f87171;
+      --yellow:     #fbbf24;
+      --purple:     #a78bfa;
+      --orange:     #fb923c;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    @keyframes blink     { 50% { opacity: 0; } }
+    @keyframes fade-up   { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fade-in   { from { opacity:0; } to { opacity:1; } }
+    @keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,.4); } 60% { box-shadow: 0 0 0 6px rgba(74,222,128,0); } }
+
+    .anim-fade-up { animation: fade-up .5s ease both; }
+    .anim-fade-in { animation: fade-in .4s ease both; }
+    .d1 { animation-delay: .05s; } .d2 { animation-delay: .12s; }
+    .d3 { animation-delay: .19s; } .d4 { animation-delay: .26s; }
+    .d5 { animation-delay: .33s; } .d6 { animation-delay: .40s; }
+
+    /* ── Header ── */
+    .hdr {
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      display: flex; align-items: stretch; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100; min-height: 72px;
+    }
+    .hdr::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--green) 20%, var(--blue) 60%, transparent);
+      opacity: 0.35;
+    }
+    .hdr-left { display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+    .hdr-prompt { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 600; color: var(--green); opacity: 0.8; }
+    .hdr-title  { font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 700; color: var(--text-1); letter-spacing: -0.02em; }
+    .hdr-cursor { color: var(--green); animation: blink 1.1s step-end infinite; }
+    .hdr-sub    { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 500; color: var(--text-3); letter-spacing: 0.01em; }
+    .hdr-right  { display: flex; align-items: center; gap: 6px; }
+    .hdr-pill   { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 700; padding: 5px 12px; letter-spacing: 0.04em; }
+    .pill-green { color: var(--green); border: 1px solid rgba(74,222,128,.3); background: rgba(74,222,128,.07); }
+    .pill-green .dot { display: inline-block; width: 6px; height: 6px; background: var(--green); border-radius: 50%; margin-right: 6px; vertical-align: middle; animation: pulse-dot 2s ease infinite; }
+    .pill-dim   { color: var(--text-2); border: 1px solid var(--border); background: var(--bg-card); }
+
+    /* ── Tabs ── */
+    .tabs-wrap {
+      background: var(--bg-deep); border-bottom: 1px solid var(--border);
+      padding: 0 40px; display: flex; position: sticky; top: 72px; z-index: 99;
+    }
+    .tab {
+      color: var(--text-3); font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;
+      padding: 14px 24px; cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s, background .2s; user-select: none;
+    }
+    .tab:hover { color: var(--text-1); background: rgba(255,255,255,.02); }
+    .tab.active { color: var(--text-1); border-bottom-color: var(--green); background: rgba(74,222,128,.04); }
+    .tab-num { color: var(--green); margin-right: 9px; font-size: 0.65rem; opacity: .7; }
+    .tab.active .tab-num { opacity: 1; }
+
+    /* ── Pages ── */
+    .page { display: none; background: var(--bg-page); }
+    .page.active { display: block; }
+    .page-inner { max-width: 1100px; margin: 0 auto; padding: 40px 28px 60px; }
+
+    /* ── Section labels ── */
+    .sec-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 700;
+      color: var(--green); letter-spacing: 0.1em; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); max-width: 180px; }
+    .sec { margin-bottom: 52px; }
+
+    /* ── Metrics ── */
+    .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .metric {
+      background: var(--bg-card); border: 1px solid var(--border); border-top: 2px solid transparent;
+      padding: 20px 16px 18px; position: relative; overflow: hidden;
+      transition: border-color .2s, transform .2s;
+    }
+    .metric::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(96,165,250,.04) 0%, transparent 60%); pointer-events: none; }
+    .metric:hover { transform: translateY(-2px); border-color: var(--border-hi); }
+    .metric.m-blue   { border-top-color: var(--blue); }
+    .metric.m-green  { border-top-color: var(--green); }
+    .metric.m-red    { border-top-color: var(--red); }
+    .metric.m-yellow { border-top-color: var(--yellow); }
+    .metric.m-purple { border-top-color: var(--purple); }
+    .metric-val  { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700; line-height: 1; color: var(--text-1); }
+    .m-blue  .metric-val { color: var(--blue); }
+    .m-green .metric-val { color: var(--green); }
+    .m-red   .metric-val { color: var(--red); }
+    .m-yellow .metric-val { color: var(--yellow); }
+    .m-purple .metric-val { color: var(--purple); }
+    .metric-key { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700; color: var(--text-3); margin-top: 10px; letter-spacing: 0.04em; }
+    .metric-sub { font-size: 0.67rem; font-weight: 500; color: var(--text-2); margin-top: 3px; }
+
+    /* ── IO section ── */
+    .io-wrap { display: flex; align-items: center; gap: 16px; }
+    .sources-col { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .src-row {
+      background: var(--bg-card); border: 1px solid var(--border); border-left: 2px solid transparent;
+      padding: 10px 16px; display: flex; align-items: center; gap: 14px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+      transition: border-color .15s, background .15s;
+    }
+    .src-row:hover { border-left-color: var(--blue); background: #1a1f2c; }
+    .src-mode  { color: var(--blue); font-weight: 700; min-width: 56px; }
+    .src-name  { color: var(--text-1); flex: 1; font-size: 0.7rem; font-weight: 600; font-family: 'Inter', sans-serif; }
+    .src-ext   { color: var(--text-2); font-size: 0.64rem; font-weight: 700; background: var(--bg-deep); border: 1px solid var(--border); padding: 2px 8px; }
+    .src-badge { font-size: 0.6rem; font-weight: 700; padding: 2px 8px; background: rgba(74,222,128,.08); color: var(--green); border: 1px solid rgba(74,222,128,.3); letter-spacing: 0.04em; }
+    .io-arrow  { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 8px; flex-shrink: 0; }
+    .arrow-shaft { width: 2px; height: 44px; background: linear-gradient(180deg, var(--border), var(--blue)); position: relative; }
+    .arrow-shaft::after { content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--blue); }
+    .arrow-label { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 700; color: var(--blue); text-align: center; line-height: 1.5; letter-spacing: 0.04em; }
+    .output-card { flex: 1; background: var(--bg-card); border: 1px solid rgba(96,165,250,.25); border-top: 2px solid var(--blue); padding: 20px; }
+    .output-title { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-bottom: 16px; }
+    .out-row  { display: flex; gap: 12px; margin-bottom: 9px; font-size: 0.71rem; align-items: baseline; }
+    .out-key  { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--text-3); min-width: 72px; font-size: 0.64rem; }
+    .out-val  { font-weight: 600; color: var(--text-1); }
+
+    /* ── Feature cards ── */
+    .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .feat-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--blue); padding: 20px; transition: transform .2s, border-color .2s; }
+    .feat-card:hover { transform: translateY(-2px); border-color: rgba(96,165,250,.6); }
+    .feat-tag   { font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; font-weight: 700; color: var(--blue); letter-spacing: 0.14em; margin-bottom: 8px; }
+    .feat-title { font-size: 0.84rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px; }
+    .feat-desc  { font-size: 0.73rem; font-weight: 500; color: var(--text-2); line-height: 1.7; }
+    .feat-desc code { font-family: 'JetBrains Mono', monospace; background: var(--bg-deep); color: var(--red); padding: 1px 6px; font-size: 0.67rem; border: 1px solid var(--border); }
+
+    /* ── Dependencies ── */
+    .dep-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .dep { background: var(--bg-card); border: 1px solid var(--border); padding: 8px 15px; display: flex; align-items: center; gap: 10px; transition: border-color .15s; cursor: default; }
+    .dep:hover { border-color: var(--border-hi); }
+    .dep-name { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; color: var(--text-1); }
+    .dep-role { font-size: 0.63rem; font-weight: 600; color: var(--text-3); }
+
+    /* ── Dev pipeline (inline nodes) ── */
+
+    /* ── Flowchart (Pipeline Flow tab) ── */
+    .flowchart-wrap { background: var(--bg-card); border: 1px solid var(--border); padding: 24px 16px; overflow: hidden; position: relative; }
+    .fc-svg-container { width: 100%; cursor: zoom-in; transition: transform .35s cubic-bezier(.25,.46,.45,.94); }
+    .fc-svg-container.zoomed { transform: scale(1.35); cursor: zoom-out; }
+    #fc-svg { display: block; width: 100%; height: auto; }
+    .fc-zoom-hint { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 600; color: var(--text-3); margin-top: 10px; letter-spacing: 0.06em; }
+    .fc-node-start    { fill: #0d1e33; stroke: rgba(96,165,250,.55);  stroke-width: 1.5; }
+    .fc-node-process  { fill: #131c28; stroke: #505a6e;               stroke-width: 1.5; }
+    .fc-node-decision { fill: #1e1a08; stroke: rgba(202,138,4,.55);   stroke-width: 1.5; }
+    .fc-node-ok       { fill: #0a1f12; stroke: rgba(74,222,128,.55);  stroke-width: 1.5; }
+    .fc-node-err      { fill: #1f0d0d; stroke: rgba(248,113,113,.55); stroke-width: 1.5; }
+    .fc-t-main  { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 12.5px; fill: #e6edf3; }
+    .fc-t-main.start  { fill: #93c5fd; }
+    .fc-t-main.ok     { fill: #4ade80; }
+    .fc-t-main.err    { fill: #f87171; }
+    .fc-t-main.decide { fill: #fbbf24; }
+    .fc-t-sub   { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 9.5px; fill: #a0adb8; }
+    .fc-edge    { fill: none; stroke: #505a6e; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .fc-edge-yes { stroke: rgba(74,222,128,.7); }
+    .fc-edge-no  { stroke: rgba(248,113,113,.7); }
+    @keyframes draw-path { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+    .fc-edge.animated { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); }
+    .fc-edge.animated.run { animation: draw-path .6s ease forwards; }
+    .fc-label-yes { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 9px; fill: #4ade80; }
+    .fc-label-no  { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 9px; fill: #f87171; }
+
+    /* ── Horizontal station timeline (Overview) ── */
+    /* ── Chart Grid ── */
+    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .chart-cell { background: var(--bg-card); border: 1px solid var(--border); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .chart-mock { background: var(--bg-input); border: 1px solid var(--border); padding: 10px 12px 4px; }
+    .chart-mock svg { width: 100%; height: 80px; display: block; }
+    .chart-meta { display: flex; align-items: center; gap: 8px; }
+    .chart-name { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; color: var(--text-1); }
+    .chart-type-badge { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700; padding: 2px 7px; letter-spacing: .05em; flex-shrink: 0; }
+    .chart-type-badge.line { background: rgba(96,165,250,.15); color: var(--blue); border: 1px solid rgba(96,165,250,.3); }
+    .chart-type-badge.bar  { background: rgba(74,222,128,.12); color: var(--green); border: 1px solid rgba(74,222,128,.25); }
+    .chart-desc { font-size: 0.75rem; color: var(--text-3); line-height: 1.55; }
+    .chart-desc code { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--blue); }
+
+    @keyframes glow-h-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,.5), 0 0 10px rgba(74,222,128,.2); }
+      50%      { box-shadow: 0 0 0 7px rgba(74,222,128,0), 0 0 22px rgba(74,222,128,.5); }
+    }
+    .station-track-h {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 24px 28px;
+    }
+    .station-h {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 120px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .station-h-dot {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--bg-deep);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 1;
+    }
+    .station-h-dot-inner {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .station-h.done .station-h-dot   { border-color: rgba(96,165,250,.6); background: rgba(96,165,250,.08); }
+    .station-h.done .station-h-dot-inner { background: var(--blue); }
+    .station-h.pending .station-h-dot { border-color: rgba(251,191,36,.5); background: rgba(251,191,36,.05); }
+    .station-h.pending .station-h-dot-inner { background: var(--yellow); opacity: .6; }
+    .live-h-dot {
+      border-color: rgba(74,222,128,.75) !important;
+      background: rgba(74,222,128,.1) !important;
+      animation: glow-h-pulse 2.2s ease infinite;
+    }
+    .live-h-dot .station-h-dot-inner { background: var(--green) !important; }
+
+    .station-h-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem; font-weight: 700;
+      letter-spacing: 0.1em; text-align: center;
+      color: var(--text-3);
+    }
+    .station-h-label.done    { color: var(--blue); }
+    .station-h-label.pending { color: var(--yellow); }
+    .station-h-label.live    { color: var(--green); }
+
+    .station-h-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem; font-weight: 600;
+      color: var(--text-3); text-align: center;
+    }
+    .station-h-sub.live { color: var(--green); }
+
+    .station-h-rail {
+      flex: 1;
+      height: 2px;
+      min-width: 32px;
+      background: var(--blue);
+      opacity: 0.45;
+      position: relative;
+      top: -10px;
+    }
+    .station-h-rail.pending { background: var(--yellow); opacity: 0.3; }
+    .station-h-rail.dim     { background: var(--border); opacity: 0.35; }
+
+    /* ── Station timeline ── */
+    @keyframes glow-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,.5), 0 0 12px rgba(74,222,128,.25); }
+      50%      { box-shadow: 0 0 0 8px rgba(74,222,128,0), 0 0 24px rgba(74,222,128,.45); }
+    }
+    @keyframes live-glow {
+      0%,100% { box-shadow: 0 0 16px rgba(74,222,128,.12), 0 0 0 1px rgba(74,222,128,.2); }
+      50%      { box-shadow: 0 0 32px rgba(74,222,128,.24), 0 0 0 1px rgba(74,222,128,.4); }
+    }
+
+    /* ── Error grid ── */
+    .err-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .err-card { background: var(--bg-card); border: 1px solid var(--border); padding: 18px 20px; }
+    .err-title { font-size: 0.83rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px; }
+    .err-desc  { font-size: 0.73rem; font-weight: 500; color: var(--text-2); line-height: 1.65; }
+    .err-desc code { font-family: 'JetBrains Mono', monospace; background: var(--bg-deep); color: var(--red); padding: 1px 6px; font-size: 0.67rem; border: 1px solid var(--border); }
+
+    /* ── Code cards (page 3) ── */
+    .code-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .code-card { background: #07090e; border: 1px solid var(--border); overflow: hidden; cursor: pointer; }
+    .code-card:hover { border-color: var(--border-hi); }
+    .code-card-hdr { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+    .code-card-title { font-size: 0.72rem; font-weight: 700; color: var(--text-1); }
+    .code-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700; padding: 2px 9px; background: rgba(74,222,128,.08); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+    pre { padding: 16px; font-size: 0.72rem; line-height: 1.78; color: var(--text-1); overflow-x: auto; font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace; font-weight: 500; }
+    .kw { color: #f472b6; font-weight: 700; }
+    .vr { color: var(--blue); }
+    .st { color: #86efac; }
+    .cm { color: #4d5a6a; font-style: italic; }
+    .nm { color: var(--orange); }
+    .type-cursor { display: inline-block; width: 2px; height: 1em; background: var(--green); vertical-align: text-bottom; margin-left: 1px; animation: blink .9s step-end infinite; }
+
+    /* ── Convo cards ── */
+    .convo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .convo-card { background: var(--bg-card); border: 1px solid var(--border); overflow: hidden; cursor: pointer; }
+    .convo-card:hover { border-color: var(--border-hi); }
+    .convo-hdr  { padding: 11px 18px; background: var(--bg-deep); border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700; color: var(--blue); letter-spacing: 0.03em; }
+    .convo-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .msg { display: flex; gap: 10px; align-items: flex-start; opacity: 0; transform: translateY(6px); transition: opacity .25s ease, transform .25s ease; }
+    .msg.visible { opacity: 1; transform: translateY(0); }
+    .avatar { width: 26px; height: 26px; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .avatar-u { background: rgba(96,165,250,.12); color: var(--blue);   border: 1px solid rgba(96,165,250,.35); }
+    .avatar-c { background: rgba(251,191,36,.1);  color: var(--yellow); border: 1px solid rgba(251,191,36,.3);  }
+    .bubble   { font-size: 0.76rem; font-weight: 500; line-height: 1.65; color: var(--text-1); background: var(--bg-page); border: 1px solid var(--border); padding: 8px 12px; flex: 1; }
+    .bubble-c { background: #100f09; border-color: rgba(251,191,36,.2); }
+    .bubble code { font-family: 'JetBrains Mono', monospace; background: var(--bg-deep); color: var(--red); padding: 1px 5px; font-size: 0.66rem; border: 1px solid var(--border); }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .hdr { padding: 0 20px; min-height: 60px; }
+      .hdr-prompt { display: none; }
+      .hdr-title { font-size: 0.95rem; }
+      .tabs-wrap { top: 60px; padding: 0 12px; }
+      .tab { font-size: 0.7rem; padding: 12px 14px; }
+      .page-inner { padding: 24px 16px 48px; }
+      .metrics-row { grid-template-columns: repeat(3, 1fr); }
+      .io-wrap { flex-direction: column; gap: 12px; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .err-grid  { grid-template-columns: 1fr; }
+      .code-grid  { grid-template-columns: 1fr; }
+      .convo-grid { grid-template-columns: 1fr; }
+    }
+
+    footer { text-align: center; padding: 20px 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.67rem; font-weight: 600; color: var(--text-3); border-top: 1px solid var(--border); background: var(--bg-deep); letter-spacing: 0.04em; }
+  </style>
+</head>
+<body>
+
+<!-- ══ Header ══ -->
+<header class="hdr">
+  <div class="hdr-left">
+    <span class="hdr-prompt">~/projects/inbound-capacity-report</span>
+    <h1 class="hdr-title">capacity_report<span class="hdr-cursor">_</span></h1>
+    <p class="hdr-sub">Weekly inbound capacity automation &nbsp;·&nbsp; Python &nbsp;·&nbsp; XLSX → XLSX → SMTP</p>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-pill pill-green"><span class="dot"></span>IN TESTING</span>
+    <span class="hdr-pill pill-dim">1 run/week</span>
+    <span class="hdr-pill pill-dim">v1.0</span>
+  </div>
+</header>
+
+<!-- ══ Tabs ══ -->
+<div class="tabs-wrap">
+  <div class="tab active" onclick="switchTab(0)"><span class="tab-num">01</span>Overview</div>
+  <div class="tab" onclick="switchTab(1)"><span class="tab-num">02</span>Pipeline Flow</div>
+  <div class="tab" onclick="switchTab(2)"><span class="tab-num">03</span>Code &amp; Highlights</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 1 — OVERVIEW
+══════════════════════════════════════ -->
+<div class="page active" id="page-0">
+  <div class="page-inner">
+
+    <div class="sec">
+      <p class="sec-label">// system_metrics</p>
+      <div class="metrics-row">
+        <div class="metric m-blue anim-fade-up d1">
+          <div class="metric-val">3</div>
+          <div class="metric-key">sources_merged</div>
+          <div class="metric-sub">AIR · OTR · Ocean</div>
+        </div>
+        <div class="metric m-green anim-fade-up d2">
+          <div class="metric-val">5</div>
+          <div class="metric-key">sites_tracked</div>
+          <div class="metric-sub">CA · TX · IL · NJ · ON</div>
+        </div>
+        <div class="metric m-red anim-fade-up d3">
+          <div class="metric-val">0</div>
+          <div class="metric-key">manual_steps</div>
+          <div class="metric-sub">fully automated</div>
+        </div>
+        <div class="metric m-yellow anim-fade-up d4">
+          <div class="metric-val">4wk</div>
+          <div class="metric-key">forecast_window</div>
+          <div class="metric-sub">actual + trend</div>
+        </div>
+        <div class="metric m-purple anim-fade-up d5">
+          <div class="metric-val">Mon</div>
+          <div class="metric-key">schedule</div>
+          <div class="metric-sub">every Monday 9AM</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="sec-label">// dev_timeline</p>
+      <div class="station-track-h">
+        <div class="station-h done">
+          <div class="station-h-dot"><div class="station-h-dot-inner"></div></div>
+          <div class="station-h-label done">BRD REVIEW</div>
+          <div class="station-h-sub">4 hours</div>
+        </div>
+        <div class="station-h-rail done"></div>
+        <div class="station-h done">
+          <div class="station-h-dot"><div class="station-h-dot-inner"></div></div>
+          <div class="station-h-label done">DEVELOPMENT</div>
+          <div class="station-h-sub">2 days</div>
+        </div>
+        <div class="station-h-rail pending"></div>
+        <div class="station-h pending">
+          <div class="station-h-dot"><div class="station-h-dot-inner"></div></div>
+          <div class="station-h-label pending">TESTING / QA</div>
+          <div class="station-h-sub">Pending</div>
+        </div>
+        <div class="station-h-rail dim"></div>
+        <div class="station-h live">
+          <div class="station-h-dot live-h-dot"><div class="station-h-dot-inner"></div></div>
+          <div class="station-h-label live">GO-LIVE</div>
+          <div class="station-h-sub live">Scheduled</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="sec-label">// data_sources → output</p>
+      <div class="io-wrap">
+        <div class="sources-col">
+          <div class="src-row anim-fade-up d1"><span class="src-mode">AIR</span><span class="src-name">Air Inbound Tracking</span><span class="src-ext">.xlsm</span><span class="src-badge">weekly</span></div>
+          <div class="src-row anim-fade-up d2"><span class="src-mode">OTR</span><span class="src-name">OTR Inbound Tracking</span><span class="src-ext">.xlsm</span><span class="src-badge">weekly</span></div>
+          <div class="src-row anim-fade-up d3"><span class="src-mode">Ocean</span><span class="src-name">Vessel Inbound Tracking</span><span class="src-ext">.xlsm</span><span class="src-badge">weekly</span></div>
+        </div>
+        <div class="io-arrow">
+          <div class="arrow-shaft"></div>
+          <div class="arrow-label">AGGREGATE<br>+ FILL</div>
+        </div>
+        <div class="output-card anim-fade-up d3">
+          <div class="output-title">Inbound Capacity Report WK##.xlsx</div>
+          <div class="out-row"><span class="out-key">template</span><span class="out-val">pre-built Excel template copied</span></div>
+          <div class="out-row"><span class="out-key">air</span><span class="out-val">C/W sum · HAWB# count · 4wk avg</span></div>
+          <div class="out-row"><span class="out-key">otr</span><span class="out-val">BL# count (deduped) · 4wk avg</span></div>
+          <div class="out-row"><span class="out-key">ocean</span><span class="out-val">Cntr.# · HBL# · 4wk forecast</span></div>
+          <div class="out-row"><span class="out-key">email</span><span class="out-val">attached to weekly distribution</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="sec-label">// technical_highlights</p>
+      <div class="feat-grid">
+        <div class="feat-card anim-fade-up d1">
+          <div class="feat-tag">AGGREGATION</div>
+          <div class="feat-title">Mode-Aware Direction</div>
+          <div class="feat-desc">AIR and OTR aggregate past 4 weeks for trend averages. Ocean aggregates current + next 3 weeks as forward-looking capacity forecast.</div>
+        </div>
+        <div class="feat-card anim-fade-up d2">
+          <div class="feat-tag">DATA QUALITY</div>
+          <div class="feat-title">BL# Deduplication</div>
+          <div class="feat-desc">OTR deduplicates on <code>BL#</code> before aggregation, keeping first occurrence. Prevents inflated load counts from multi-row entries.</div>
+        </div>
+        <div class="feat-card anim-fade-up d3">
+          <div class="feat-tag">RESILIENCE</div>
+          <div class="feat-title">All-File Validation</div>
+          <div class="feat-desc">All three files checked upfront. Missing files collected and sent in one alert.</div>
+        </div>
+        <div class="feat-card anim-fade-up d4">
+          <div class="feat-tag">OUTPUT</div>
+          <div class="feat-title">Template-Based Excel</div>
+          <div class="feat-desc"><code>shutil.copy2</code> preserves all template formatting. Data written to mapped cells via <code>ROW_MAP</code>, no formula rebuilding.</div>
+        </div>
+        <div class="feat-card anim-fade-up d5">
+          <div class="feat-tag">DISCOVERY</div>
+          <div class="feat-title">Date-Driven File Lookup</div>
+          <div class="feat-desc">Files found by glob-matching today's date (<code>MM-DD-YY</code>) in the filename. No hardcoded paths.</div>
+        </div>
+        <div class="feat-card anim-fade-up d6">
+          <div class="feat-tag">ALERTING</div>
+          <div class="feat-title">Typed Failure Emails</div>
+          <div class="feat-desc">Missing file errors and runtime exceptions send distinct HTML alerts, each with relevant details.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="sec-label">// dependencies</p>
+      <div class="dep-grid">
+        <div class="dep"><span class="dep-name">python</span><span class="dep-role">runtime</span></div>
+        <div class="dep"><span class="dep-name">pandas</span><span class="dep-role">aggregation</span></div>
+        <div class="dep"><span class="dep-name">openpyxl</span><span class="dep-role">excel read/write</span></div>
+        <div class="dep"><span class="dep-name">smtplib</span><span class="dep-role">smtp outbound</span></div>
+        <div class="dep"><span class="dep-name">python-dotenv</span><span class="dep-role">credentials</span></div>
+        <div class="dep"><span class="dep-name">claude-code</span><span class="dep-role">AI dev</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 2 — PIPELINE FLOW
+══════════════════════════════════════ -->
+<div class="page" id="page-1">
+  <div class="page-inner">
+
+    <div class="sec">
+      <p class="sec-label">// execution_flow</p>
+      <div class="flowchart-wrap">
+        <div class="fc-svg-container">
+        <svg id="fc-svg" viewBox="0 0 860 700">
+          <defs>
+            <marker id="arr"     markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0.5 L0,6.5 L7,3.5 z" fill="#505a6e"/></marker>
+            <marker id="arr-yes" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0.5 L0,6.5 L7,3.5 z" fill="rgba(74,222,128,.85)"/></marker>
+            <marker id="arr-no"  markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0.5 L0,6.5 L7,3.5 z" fill="rgba(248,113,113,.85)"/></marker>
+          </defs>
+
+          <!-- ══ EDGES ══ -->
+          <line class="fc-edge animated" x1="430" y1="44"  x2="430" y2="72"  marker-end="url(#arr)"/>
+          <line class="fc-edge animated" x1="430" y1="124" x2="430" y2="152" marker-end="url(#arr)"/>
+          <line class="fc-edge animated" x1="430" y1="204" x2="430" y2="240" marker-end="url(#arr)"/>
+          <!-- Decision: No → left (fail alert) -->
+          <path class="fc-edge fc-edge-no animated" d="M 404,264 H 160 V 300" marker-end="url(#arr-no)"/>
+          <!-- Decision: Yes → down (process) -->
+          <line class="fc-edge fc-edge-yes animated" x1="430" y1="288" x2="430" y2="316" marker-end="url(#arr-yes)"/>
+          <!-- Process air -->
+          <line class="fc-edge animated" x1="430" y1="368" x2="430" y2="396" marker-end="url(#arr)"/>
+          <!-- Process otr -->
+          <line class="fc-edge animated" x1="430" y1="448" x2="430" y2="476" marker-end="url(#arr)"/>
+          <!-- Process vessel -->
+          <line class="fc-edge animated" x1="430" y1="528" x2="430" y2="556" marker-end="url(#arr)"/>
+          <!-- Write report -->
+          <line class="fc-edge animated" x1="430" y1="608" x2="430" y2="636" marker-end="url(#arr)"/>
+
+          <!-- ══ NODES ══ -->
+          <!-- START -->
+          <rect class="fc-node-start" x="290" y="0" width="280" height="44" rx="4"/>
+          <text class="fc-t-main start" x="430" y="16" text-anchor="middle" dominant-baseline="middle" dy="6">Monday 9AM — Scheduled Run</text>
+          <text class="fc-t-sub" x="430" y="34" text-anchor="middle">Windows Task Scheduler</text>
+
+          <!-- Locate all 3 files -->
+          <rect class="fc-node-process" x="300" y="72" width="260" height="52" rx="0"/>
+          <text class="fc-t-main" x="430" y="92" text-anchor="middle">Locate All 3 Tracking Files</text>
+          <text class="fc-t-sub"  x="430" y="109" text-anchor="middle">glob *MM-DD-YY*{keyword}*.xlsm</text>
+
+          <!-- All found? -->
+          <rect class="fc-node-process" x="300" y="152" width="260" height="52" rx="0"/>
+          <text class="fc-t-main" x="430" y="172" text-anchor="middle">Check All Files Found</text>
+          <text class="fc-t-sub"  x="430" y="189" text-anchor="middle">AIR · OTR · Vessel</text>
+
+          <!-- Decision diamond -->
+          <polygon class="fc-node-decision" points="430,240 510,264 430,288 350,264"/>
+          <text class="fc-t-main decide" x="430" y="260" text-anchor="middle">All 3</text>
+          <text class="fc-t-main decide" x="430" y="274" text-anchor="middle">present?</text>
+          <text class="fc-label-no"  x="280" y="259" text-anchor="middle">No</text>
+          <text class="fc-label-yes" x="448" y="304" text-anchor="start">Yes</text>
+
+          <!-- Failure alert (left) -->
+          <rect class="fc-node-err" x="72" y="300" width="176" height="52" rx="0"/>
+          <text class="fc-t-main err" x="160" y="320" text-anchor="middle">Send Failure Alert</text>
+          <text class="fc-t-sub"     x="160" y="337" text-anchor="middle">list all missing files</text>
+
+          <!-- Process AIR -->
+          <rect class="fc-node-process" x="300" y="316" width="260" height="52" rx="0"/>
+          <text class="fc-t-main" x="430" y="336" text-anchor="middle">Process AIR</text>
+          <text class="fc-t-sub"  x="430" y="353" text-anchor="middle">C/W sum · HAWB# · 4wk avg</text>
+
+          <!-- Process OTR -->
+          <rect class="fc-node-process" x="300" y="396" width="260" height="52" rx="0"/>
+          <text class="fc-t-main" x="430" y="416" text-anchor="middle">Process OTR</text>
+          <text class="fc-t-sub"  x="430" y="433" text-anchor="middle">BL# dedup · 4wk avg</text>
+
+          <!-- Process Vessel -->
+          <rect class="fc-node-process" x="300" y="476" width="260" height="52" rx="0"/>
+          <text class="fc-t-main" x="430" y="496" text-anchor="middle">Process Vessel</text>
+          <text class="fc-t-sub"  x="430" y="513" text-anchor="middle">Cntr# · HBL# · 4wk forecast</text>
+
+          <!-- Write report -->
+          <rect class="fc-node-process" x="300" y="556" width="260" height="52" rx="0"/>
+          <text class="fc-t-main" x="430" y="576" text-anchor="middle">Write Capacity Report</text>
+          <text class="fc-t-sub"  x="430" y="593" text-anchor="middle">copy template → fill cells</text>
+
+          <!-- Send email -->
+          <rect class="fc-node-ok" x="300" y="636" width="260" height="52" rx="0"/>
+          <text class="fc-t-main ok" x="430" y="656" text-anchor="middle">Email Report</text>
+          <text class="fc-t-sub"    x="430" y="673" text-anchor="middle">WK## attached → recipients</text>
+
+        </svg>
+        </div>
+        <p class="fc-zoom-hint">click to zoom in</p>
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="sec-label">// chart_dashboard</p>
+      <div class="chart-grid">
+
+        <!-- LINE chart type -->
+        <div class="chart-cell anim-fade-up d1">
+          <div class="chart-mock">
+            <svg viewBox="0 0 220 90" preserveAspectRatio="none">
+              <line x1="24" y1="8" x2="24" y2="78" stroke="#404858" stroke-width="1"/>
+              <line x1="24" y1="78" x2="200" y2="78" stroke="#404858" stroke-width="1"/>
+              <polyline points="24,65 80,45 136,35 192,20" fill="none" stroke="#60a5fa" stroke-width="2"/>
+              <polyline points="24,70 80,55 136,48 192,36" fill="none" stroke="#4ade80" stroke-width="2"/>
+              <polyline points="24,72 80,60 136,52 192,42" fill="none" stroke="#a78bfa" stroke-width="2"/>
+              <polyline points="24,68 80,50 136,44 192,30" fill="none" stroke="#fbbf24" stroke-width="2"/>
+              <polyline points="24,75 80,62 136,56 192,46" fill="none" stroke="#f87171" stroke-width="2"/>
+              <text x="24"  y="87" fill="#a0adb8" font-size="8" text-anchor="middle">wk0</text>
+              <text x="80"  y="87" fill="#a0adb8" font-size="8" text-anchor="middle">avg2</text>
+              <text x="136" y="87" fill="#a0adb8" font-size="8" text-anchor="middle">avg3</text>
+              <text x="192" y="87" fill="#a0adb8" font-size="8" text-anchor="middle">avg4</text>
+            </svg>
+          </div>
+          <div class="chart-meta">
+            <span class="chart-type-badge line">LINE</span>
+            <span class="chart-name">Trend Charts ×4</span>
+          </div>
+          <div class="chart-desc">AIR C/W · AIR HAWB# · OTR Load · Ocean CNTR. One series per site/state. Data staged to off-screen col 20 via <code>_write_table()</code>, bound to chart via openpyxl <code>Reference</code>.</div>
+        </div>
+
+        <!-- BAR chart type -->
+        <div class="chart-cell anim-fade-up d2">
+          <div class="chart-mock">
+            <svg viewBox="0 0 220 90" preserveAspectRatio="none">
+              <line x1="24" y1="8" x2="24" y2="78" stroke="#404858" stroke-width="1"/>
+              <line x1="24" y1="78" x2="200" y2="78" stroke="#404858" stroke-width="1"/>
+              <rect x="32"  y="28" width="22" height="50" fill="#60a5fa" opacity=".85"/>
+              <rect x="64"  y="40" width="22" height="38" fill="#60a5fa" opacity=".85"/>
+              <rect x="96"  y="18" width="22" height="60" fill="#60a5fa" opacity=".85"/>
+              <rect x="128" y="48" width="22" height="30" fill="#4ade80" opacity=".85"/>
+              <rect x="160" y="38" width="22" height="40" fill="#a78bfa" opacity=".85"/>
+              <text x="43"  y="87" fill="#a0adb8" font-size="7" text-anchor="middle">LA</text>
+              <text x="75"  y="87" fill="#a0adb8" font-size="7" text-anchor="middle">DAL</text>
+              <text x="107" y="87" fill="#a0adb8" font-size="7" text-anchor="middle">CHI</text>
+              <text x="139" y="87" fill="#a0adb8" font-size="7" text-anchor="middle">NJ</text>
+              <text x="171" y="87" fill="#a0adb8" font-size="7" text-anchor="middle">TOR</text>
+            </svg>
+          </div>
+          <div class="chart-meta">
+            <span class="chart-type-badge bar">BAR</span>
+            <span class="chart-name">Snapshot Charts ×2</span>
+          </div>
+          <div class="chart-desc">AIR C/W by Site (<code>wk0</code> snapshot) · Mode Mix (AIR / OTR / Ocean totals). Single-column <code>Reference</code> binding, placed at <code>A44 · J44</code> on Dashboard sheet.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="sec-label">// error_handling</p>
+      <div class="err-grid">
+        <div class="err-card" style="border-left:3px solid var(--red);">
+          <div class="err-title">Missing Tracking File</div>
+          <div class="err-desc">All three files checked before processing. Missing files collected and reported in one alert as a bulleted list.</div>
+        </div>
+        <div class="err-card" style="border-left:3px solid var(--orange);">
+          <div class="err-title">Unexpected Runtime Error</div>
+          <div class="err-desc">Unhandled exceptions caught at top level. Alert type distinguishes <code>missing_file</code> from general errors.</div>
+        </div>
+        <div class="err-card" style="border-left:3px solid var(--yellow);">
+          <div class="err-title">SMTP Unavailable</div>
+          <div class="err-desc">If credentials fail to load, report is saved locally and a warning is logged. Run completes without email delivery.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 3 — CODE & HIGHLIGHTS
+══════════════════════════════════════ -->
+<div class="page" id="page-2">
+  <div class="page-inner">
+
+    <div class="sec">
+      <p class="sec-label">// code_highlights</p>
+      <div class="code-grid">
+
+        <div class="code-card">
+          <div class="code-card-hdr">
+            <span class="code-card-title">All-File Validation Before Processing</span>
+            <span class="code-tag">main.py</span>
+          </div>
+          <pre><span class="cm"># Check all three files before failing —</span>
+<span class="cm"># report every missing file in one alert</span>
+missing = []
+<span class="kw">for</span> search_dir, keyword, label <span class="kw">in</span> file_specs:
+    <span class="kw">try</span>:
+        found[label] = find_tracking_file(
+            search_dir, keyword, today
+        )
+    <span class="kw">except</span> FileNotFoundError <span class="kw">as</span> e:
+        missing.append(str(e))
+
+<span class="kw">if</span> missing:
+    send_failure_alert(
+        sender, week_num, missing,
+        missing_file=<span class="kw">True</span>
+    )
+    <span class="kw">return</span></pre>
+        </div>
+
+        <div class="code-card">
+          <div class="code-card-hdr">
+            <span class="code-card-title">Typed Failure Alert Email</span>
+            <span class="code-tag">main.py</span>
+          </div>
+          <pre><span class="cm"># Missing file vs unexpected error → different body</span>
+<span class="kw">def</span> <span class="nm">send_failure_alert</span>(sender, week_num, error_msg,
+                        missing_file=<span class="kw">False</span>):
+    <span class="kw">if</span> missing_file:
+        items = (error_msg <span class="kw">if isinstance</span>(
+            error_msg, list) <span class="kw">else</span> [error_msg])
+        lines = <span class="st">''</span>.join(
+            <span class="st">f'&amp;bull; </span><span class="vr">{m}</span><span class="st">&lt;br&gt;'</span> <span class="kw">for</span> m <span class="kw">in</span> items
+        )
+        detail = (
+            <span class="st">f'&lt;b&gt;Missing File(s):&lt;/b&gt;&lt;br&gt;</span><span class="vr">{lines}</span><span class="st">&lt;br&gt;'</span>
+            <span class="st">'Please ensure all tracking files exist.'</span>
+        )
+    <span class="kw">else</span>:
+        detail = <span class="st">f'&lt;b&gt;Unexpected Error:&lt;/b&gt; </span><span class="vr">{error_msg}</span><span class="st">'</span></pre>
+        </div>
+
+        <div class="code-card">
+          <div class="code-card-hdr">
+            <span class="code-card-title">OTR BL# Dedup + Weekly Aggregation</span>
+            <span class="code-tag">otr_processor.py</span>
+          </div>
+          <pre><span class="cm"># Deduplicate on BL# (first occurrence) before any aggregation</span>
+df = df.drop_duplicates(subset=[<span class="st">'BL#'</span>]).copy()
+df = df[df[<span class="st">'ETA WH'</span>].notna()].copy()
+df[<span class="st">'ETA WH'</span>] = pd.to_datetime(df[<span class="st">'ETA WH'</span>])
+df[<span class="st">'_week'</span>] = df[<span class="st">'ETA WH'</span>].dt.isocalendar().week.astype(int)
+df[<span class="st">'_year'</span>] = df[<span class="st">'ETA WH'</span>].dt.isocalendar().year.astype(int)
+
+<span class="cm"># avg1 = current week as-is, avg2/3/4 = rolling averages</span>
+wk_data[<span class="st">'avg1'</span>] = {s: wk_data[<span class="st">'wk0'</span>][s] <span class="kw">for</span> s <span class="kw">in</span> SITES}
+<span class="kw">for</span> label, n <span class="kw">in</span> [(<span class="st">'avg2'</span>,<span class="nm">2</span>),(<span class="st">'avg3'</span>,<span class="nm">3</span>),(<span class="st">'avg4'</span>,<span class="nm">4</span>)]:
+    wk_data[label] = {s: _avg(s, n) <span class="kw">for</span> s <span class="kw">in</span> SITES}</pre>
+        </div>
+
+        <div class="code-card">
+          <div class="code-card-hdr">
+            <span class="code-card-title">Vessel ETA Coercion + Future Forecast</span>
+            <span class="code-tag">vessel_processor.py</span>
+          </div>
+          <pre><span class="cm"># errors='coerce' handles non-date values (bool, None)</span>
+<span class="cm"># notna() filters after conversion — not before</span>
+df = df[df[<span class="st">'Status'</span>] != <span class="st">'Delivery Complete'</span>].copy()
+df[<span class="st">'WH ETA'</span>] = pd.to_datetime(
+    df[<span class="st">'WH ETA'</span>], errors=<span class="st">'coerce'</span>
+)
+df = df[df[<span class="st">'WH ETA'</span>].notna()].copy()
+
+<span class="cm"># Ocean = FUTURE direction: current + next 3 weeks</span>
+<span class="kw">for</span> i <span class="kw">in</span> range(<span class="nm">4</span>):
+    d = today + timedelta(weeks=i)   <span class="cm"># + not -</span>
+    iso = d.isocalendar()
+    weeks.append((int(iso.week), int(iso.year)))</pre>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sec">
+      <p class="sec-label">// dev_process · Claude Code Conversations</p>
+      <div class="convo-grid">
+
+        <div class="convo-card">
+          <div class="convo-hdr">_update_week_headers(): Column Offset Fix</div>
+          <div class="convo-body">
+            <div class="msg">
+              <div class="avatar avatar-u">TJ</div>
+              <div class="bubble"><code>_update_week_headers()</code> — merged ranges C2:E2, F2:H2, I2:K2, L2:N2 start at columns 3,6,9,12. Fix the offset and wire the call into <code>write()</code>, remove the inline duplicate.</div>
+            </div>
+            <div class="msg">
+              <div class="avatar avatar-c">C</div>
+              <div class="bubble bubble-c">Fixed column list to <code>[3,6,9,12]</code>, removed the inline block in <code>write()</code>, and added the <code>_update_week_headers(ws, week_labels)</code> call at the top of the write flow.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="convo-card">
+          <div class="convo-hdr">vessel_processor — groupby key correction</div>
+          <div class="convo-body">
+            <div class="msg">
+              <div class="avatar avatar-u">TJ</div>
+              <div class="bubble">Group key should be <code>'Final Destination'</code>, not <code>'D. S. T.'</code>. Valid values are CATOR / USDAL / USLAX / USCHI / USNYC.</div>
+            </div>
+            <div class="msg">
+              <div class="avatar avatar-c">C</div>
+              <div class="bubble bubble-c">Updated <code>groupby</code> and the <code>DST_MAP</code> lookup to use <code>'Final Destination'</code>. All five destination codes now resolve correctly.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="convo-card">
+          <div class="convo-hdr">WH ETA — errors='coerce' + post-filter</div>
+          <div class="convo-body">
+            <div class="msg">
+              <div class="avatar avatar-u">TJ</div>
+              <div class="bubble"><code>pd.to_datetime(df['WH ETA'], errors='coerce')</code> — apply coerce first, then <code>notna()</code> filter after. Drop any pre-conversion type check, it's redundant.</div>
+            </div>
+            <div class="msg">
+              <div class="avatar avatar-c">C</div>
+              <div class="bubble bubble-c">Applied. Boolean and None values coerce to NaT, then <code>df[df['WH ETA'].notna()]</code> cleans them out. Pre-conversion guard removed.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="convo-card">
+          <div class="convo-hdr">find_tracking_file — collect all, fail once</div>
+          <div class="convo-body">
+            <div class="msg">
+              <div class="avatar avatar-u">TJ</div>
+              <div class="bubble">Wrap each <code>find_tracking_file()</code> call in its own try/except, append to <code>missing[]</code>. Send one alert with the full list — don't short-circuit on the first miss.</div>
+            </div>
+            <div class="msg">
+              <div class="avatar avatar-c">C</div>
+              <div class="bubble bubble-c">Restructured to iterate all three specs, catching <code>FileNotFoundError</code> per file. Single <code>send_failure_alert(..., missing_file=True)</code> call at the end with the complete list.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  Inbound Capacity Report Automation &nbsp;·&nbsp; Taehun Jang &nbsp;·&nbsp; Python · Claude Code
+</footer>
+
+<script>
+  function initCodeCard(card) {
+    const pre = card.querySelector('pre');
+    if (!pre || card._typingInit) return;
+    card._typingInit = true;
+    pre.querySelectorAll('span[class]').forEach(s => { s.dataset.color = getComputedStyle(s).color; });
+    function wrapChars(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const frag = document.createDocumentFragment();
+        for (const ch of node.textContent) {
+          const s = document.createElement('span');
+          s.className = 'char'; s.textContent = ch; frag.appendChild(s);
+        }
+        node.replaceWith(frag);
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        Array.from(node.childNodes).forEach(wrapChars);
+        if (node.dataset.color) {
+          node.querySelectorAll('.char:not([data-color])').forEach(c => { c.dataset.color = node.dataset.color; });
+        }
+      }
+    }
+    Array.from(pre.childNodes).forEach(wrapChars);
+    pre.querySelectorAll('.char:not([data-color])').forEach(c => { c.dataset.color = '#e6edf3'; });
+    const cursor = document.createElement('span');
+    cursor.className = 'type-cursor'; cursor.style.display = 'none';
+    pre.appendChild(cursor);
+    card._chars = Array.from(pre.querySelectorAll('.char'));
+    card._cursor = cursor; card._typing = false;
+  }
+
+  function replayCode(card) {
+    if (card._typing) return;
+    card._typing = true;
+    card._cursor.style.display = 'inline-block';
+    card._chars.forEach(c => { c.style.color = 'transparent'; });
+    const batch = Math.max(1, Math.floor(card._chars.length / 280));
+    let i = 0;
+    function tick() {
+      if (i >= card._chars.length) { card._cursor.style.display = 'none'; card._typing = false; return; }
+      for (let b = 0; b < batch && i < card._chars.length; b++, i++) {
+        card._chars[i].style.color = card._chars[i].dataset.color;
+      }
+      setTimeout(tick, 10);
+    }
+    setTimeout(tick, 80);
+  }
+
+  function initConvoCard(card) {
+    if (card._typingInit) return;
+    card._typingInit = true;
+    card._msgs = Array.from(card.querySelectorAll('.msg'));
+    card._typing = false;
+  }
+
+  function replayConvo(card) {
+    if (card._typing) return;
+    card._typing = true;
+    card._msgs.forEach(m => m.classList.remove('visible'));
+    card._msgs.forEach((m, i) => {
+      setTimeout(() => {
+        m.classList.add('visible');
+        if (i === card._msgs.length - 1) card._typing = false;
+      }, 150 + i * 480);
+    });
+  }
+
+  let page2Inited = false;
+  function initPage2() {
+    if (page2Inited) return;
+    page2Inited = true;
+    document.querySelectorAll('.code-card').forEach(initCodeCard);
+    document.querySelectorAll('.convo-card .msg').forEach(m => m.classList.add('visible'));
+    document.querySelectorAll('.convo-card').forEach(initConvoCard);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        observer.unobserve(el);
+        if (el.classList.contains('code-card'))  replayCode(el);
+        if (el.classList.contains('convo-card')) replayConvo(el);
+      });
+    }, { threshold: 0.35 });
+    document.querySelectorAll('.code-card, .convo-card').forEach(c => observer.observe(c));
+  }
+
+  let flowInited = false;
+  function initFlow() {
+    if (flowInited) return;
+    flowInited = true;
+    const container = document.querySelector('.fc-svg-container');
+    if (container) {
+      container.addEventListener('click', () => container.classList.toggle('zoomed'));
+    }
+    const edges = document.querySelectorAll('.fc-edge.animated');
+    edges.forEach((e, idx) => {
+      const len = e.getTotalLength ? e.getTotalLength() : 200;
+      e.style.setProperty('--len', len);
+      e.style.strokeDasharray = len;
+      e.style.strokeDashoffset = len;
+      setTimeout(() => e.classList.add('run'), 80 + idx * 60);
+    });
+  }
+
+  function switchTab(i) {
+    document.querySelectorAll('.tab').forEach((t, j)  => t.classList.toggle('active', j === i));
+    document.querySelectorAll('.page').forEach((p, j) => p.classList.toggle('active', j === i));
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (i === 1) initFlow();
+    if (i === 2) initPage2();
+    document.querySelectorAll('.page.active .anim-fade-up, .page.active .anim-fade-in').forEach(el => {
+      el.style.animation = 'none'; el.offsetHeight; el.style.animation = '';
+    });
+  }
+
+</script>
+
+</body>
+</html>
