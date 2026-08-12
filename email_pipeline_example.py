@@ -22,7 +22,7 @@ OCEAN_DIR    = _BASE / 'Ocean inbound' / 'final'
 OTR_DIR      = _BASE / 'OTR inbound'   / 'final'
 CAPACITY_DIR = _BASE / 'Capacity'
 
-# .env file path — holds SMTP credentials
+# .env file path, holds SMTP credentials
 ENV_PATH = Path(r'C:\path\to\your\.env')
 
 # SMTP

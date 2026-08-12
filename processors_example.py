@@ -174,7 +174,7 @@ def vessel_agg_week(df: pd.DataFrame, week: int, year: int) -> dict:
 
 def vessel_process(file_path: Path, today: datetime = None) -> dict:
     """
-    Returns wk0..wk3 (current week + next 3 weeks — forward direction).
+    Returns wk0..wk3 (current week + next 3 weeks, forward direction).
     Each week entry: {dst: (cntr_count, hbl_count)}
     """
     if today is None:
@@ -221,7 +221,7 @@ def _write_pair(ws, row, col_cw, col_hbl, cw_val, hbl_val):
 
 
 def _update_week_headers(ws, base_week: int, base_year: int):
-    # Merged ranges C2:E2, F2:H2, I2:K2, L2:N2 — write to first cell of each
+    # Merged ranges C2:E2, F2:H2, I2:K2, L2:N2; write to first cell of each
     for i, col in enumerate([3, 6, 9, 12]):
         d = date.fromisocalendar(base_year, base_week, 1) + timedelta(weeks=i)
         ws.cell(row=2, column=col).value = f'WK{d.isocalendar()[1]}'

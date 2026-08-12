@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inbound Capacity Report — Portfolio</title>
+  <title>Inbound Capacity Report · Portfolio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -568,7 +568,7 @@
           <!-- ══ NODES ══ -->
           <!-- START -->
           <rect class="fc-node-start" x="290" y="0" width="280" height="44" rx="4"/>
-          <text class="fc-t-main start" x="430" y="16" text-anchor="middle" dominant-baseline="middle" dy="6">Monday 9AM — Scheduled Run</text>
+          <text class="fc-t-main start" x="430" y="16" text-anchor="middle" dominant-baseline="middle" dy="6">Monday 9AM · Scheduled Run</text>
           <text class="fc-t-sub" x="430" y="34" text-anchor="middle">Windows Task Scheduler</text>
 
           <!-- Locate all 3 files -->
@@ -716,7 +716,7 @@
             <span class="code-card-title">All-File Validation Before Processing</span>
             <span class="code-tag">main.py</span>
           </div>
-          <pre><span class="cm"># Check all three files before failing —</span>
+          <pre><span class="cm"># Check all three files before failing;</span>
 <span class="cm"># report every missing file in one alert</span>
 missing = []
 <span class="kw">for</span> search_dir, keyword, label <span class="kw">in</span> file_specs:
@@ -781,7 +781,7 @@ wk_data[<span class="st">'avg1'</span>] = {s: wk_data[<span class="st">'wk0'</sp
             <span class="code-tag">vessel_processor.py</span>
           </div>
           <pre><span class="cm"># errors='coerce' handles non-date values (bool, None)</span>
-<span class="cm"># notna() filters after conversion — not before</span>
+<span class="cm"># notna() filters after conversion, not before</span>
 df = df[df[<span class="st">'Status'</span>] != <span class="st">'Delivery Complete'</span>].copy()
 df[<span class="st">'WH ETA'</span>] = pd.to_datetime(
     df[<span class="st">'WH ETA'</span>], errors=<span class="st">'coerce'</span>
@@ -807,7 +807,7 @@ df = df[df[<span class="st">'WH ETA'</span>].notna()].copy()
           <div class="convo-body">
             <div class="msg">
               <div class="avatar avatar-u">TJ</div>
-              <div class="bubble"><code>_update_week_headers()</code> — merged ranges C2:E2, F2:H2, I2:K2, L2:N2 start at columns 3,6,9,12. Fix the offset and wire the call into <code>write()</code>, remove the inline duplicate.</div>
+              <div class="bubble"><code>_update_week_headers()</code>: merged ranges C2:E2, F2:H2, I2:K2, L2:N2 start at columns 3,6,9,12. Fix the offset and wire the call into <code>write()</code>, remove the inline duplicate.</div>
             </div>
             <div class="msg">
               <div class="avatar avatar-c">C</div>
@@ -817,7 +817,7 @@ df = df[df[<span class="st">'WH ETA'</span>].notna()].copy()
         </div>
 
         <div class="convo-card">
-          <div class="convo-hdr">vessel_processor — groupby key correction</div>
+          <div class="convo-hdr">vessel_processor: groupby key correction</div>
           <div class="convo-body">
             <div class="msg">
               <div class="avatar avatar-u">TJ</div>
@@ -831,11 +831,11 @@ df = df[df[<span class="st">'WH ETA'</span>].notna()].copy()
         </div>
 
         <div class="convo-card">
-          <div class="convo-hdr">WH ETA — errors='coerce' + post-filter</div>
+          <div class="convo-hdr">WH ETA: errors='coerce' + post-filter</div>
           <div class="convo-body">
             <div class="msg">
               <div class="avatar avatar-u">TJ</div>
-              <div class="bubble"><code>pd.to_datetime(df['WH ETA'], errors='coerce')</code> — apply coerce first, then <code>notna()</code> filter after. Drop any pre-conversion type check, it's redundant.</div>
+              <div class="bubble"><code>pd.to_datetime(df['WH ETA'], errors='coerce')</code>: apply coerce first, then <code>notna()</code> filter after. Drop any pre-conversion type check, it's redundant.</div>
             </div>
             <div class="msg">
               <div class="avatar avatar-c">C</div>
@@ -845,11 +845,11 @@ df = df[df[<span class="st">'WH ETA'</span>].notna()].copy()
         </div>
 
         <div class="convo-card">
-          <div class="convo-hdr">find_tracking_file — collect all, fail once</div>
+          <div class="convo-hdr">find_tracking_file: collect all, fail once</div>
           <div class="convo-body">
             <div class="msg">
               <div class="avatar avatar-u">TJ</div>
-              <div class="bubble">Wrap each <code>find_tracking_file()</code> call in its own try/except, append to <code>missing[]</code>. Send one alert with the full list — don't short-circuit on the first miss.</div>
+              <div class="bubble">Wrap each <code>find_tracking_file()</code> call in its own try/except, append to <code>missing[]</code>. Send one alert with the full list, don't short-circuit on the first miss.</div>
             </div>
             <div class="msg">
               <div class="avatar avatar-c">C</div>

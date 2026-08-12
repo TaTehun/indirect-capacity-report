@@ -1,4 +1,4 @@
-# Inbound Capacity Report — Automation Pipeline
+# Inbound Capacity Report · Automation Pipeline
 
 A weekly Python automation that reads Air, OTR, and Ocean inbound tracking files, aggregates shipment data by site and week, fills the Capacity Report Excel template, and distributes the result via email every Monday.
 
@@ -14,7 +14,7 @@ Each Monday, three tracking files are prepared by the inbound team. This pipelin
 2. **Aggregates** each source by site and ISO week using pandas
 3. **Fills** the Capacity Report template with the aggregated values
 4. **Distributes** the completed report as an email attachment
-5. **Alerts** stakeholders if any tracking files are missing — listing all missing files in a single email
+5. **Alerts** stakeholders if any tracking files are missing, listing all missing files in a single email
 
 ---
 
@@ -76,9 +76,9 @@ Tracking files are located by glob pattern matching today's date (`MM-DD-YY`) in
 
 ### 2. Aggregation
 Each processor reads the `RawData` sheet and aggregates independently:
-- **AIR** — C/W sum and HAWB# count per POD, current week + rolling avg2/3/4
-- **OTR** — BL# count per State after deduplication, current week + rolling avg1/2/3/4
-- **Ocean** — Cntr.# and HBL# count per Final Destination, current + next 3 weeks
+- **AIR**: C/W sum and HAWB# count per POD, current week + rolling avg2/3/4
+- **OTR**: BL# count per State after deduplication, current week + rolling avg1/2/3/4
+- **Ocean**: Cntr.# and HBL# count per Final Destination, current + next 3 weeks
 
 ### 3. Report Writing
 The template is copied via `shutil.copy2`, preserving all formatting. Week headers and data cells are filled using a fixed `ROW_MAP` and column index mapping.

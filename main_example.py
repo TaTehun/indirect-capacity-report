@@ -54,7 +54,7 @@ def send_failure_alert(sender, week_num: int, error_msg, missing_file: bool = Fa
 def main():
     today    = datetime.today()
     week_num = int(today.isocalendar().week)
-    log.info(f'Starting Inbound Capacity Report — {today.strftime("%Y-%m-%d")}')
+    log.info(f'Starting Inbound Capacity Report: {today.strftime("%Y-%m-%d")}')
 
     sender = load_sender()
 
@@ -95,7 +95,7 @@ def main():
         return
 
     if sender is None:
-        log.error('Email sender unavailable — report saved locally only.')
+        log.error('Email sender unavailable. Report saved locally only.')
         return
 
     subject = cfg.EMAIL_SUBJECT.format(week_num)
